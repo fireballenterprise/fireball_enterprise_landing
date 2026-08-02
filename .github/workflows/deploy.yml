@@ -2,17 +2,11 @@
 name: Deploy
 run-name: "Deploy (${{ github.ref_name }})"
 
-# DRAFT — needs real AWS infra before this can run:
-#   1. An S3 bucket for the site (behind CloudFront for HTTPS on a custom domain)
-#   2. A CloudFront distribution in front of it
-#   3. An IAM role trusting this repo via GitHub's OIDC provider (no long-lived AWS keys)
-# Fill in the TODOs below once that exists.
-
 on:
-  workflow_dispatch: # manual runs for testing until the push trigger is re-enabled below
-  # push:
-  #   branches:
-  #     - main
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   deploy:
@@ -41,14 +35,11 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          # TODO: replace with the real deploy role once it exists
-          role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/fireball-enterprise-landing-deploy
+          role-to-assume: arn:aws:iam::213533013207:role/fireball-enterprise-landing-deploy
           aws-region: us-east-1
 
       - name: Sync to S3
-        # TODO: replace with the real bucket name
         run: aws s3 sync dist/ s3://fireballenterprise.com --delete
 
       - name: Invalidate CloudFront Cache
-        # TODO: replace with the real distribution ID
-        run: aws cloudfront create-invalidation --distribution-id <DISTRIBUTION_ID> --paths "/*"
+        run: aws cloudfront create-invalidation --distribution-id E13CBSJFG44K6X --paths "/*"
