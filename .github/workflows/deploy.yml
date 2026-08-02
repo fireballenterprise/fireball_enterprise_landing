@@ -1,0 +1,54 @@
+---
+name: Deploy
+run-name: "Deploy (${{ github.ref_name }})"
+
+# DRAFT — needs real AWS infra before this can run:
+#   1. An S3 bucket for the site (behind CloudFront for HTTPS on a custom domain)
+#   2. A CloudFront distribution in front of it
+#   3. An IAM role trusting this repo via GitHub's OIDC provider (no long-lived AWS keys)
+# Fill in the TODOs below once that exists.
+
+on:
+  workflow_dispatch: # manual runs for testing until the push trigger is re-enabled below
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for AWS OIDC — no long-lived access keys
+    steps:
+      - name: Check Out Code
+        uses: actions/checkout@v7
+        with:
+          lfs: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          # TODO: replace with the real deploy role once it exists
+          role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/fireball-enterprise-landing-deploy
+          aws-region: us-east-1
+
+      - name: Sync to S3
+        # TODO: replace with the real bucket name
+        run: aws s3 sync dist/ s3://fireballenterprise.com --delete
+
+      - name: Invalidate CloudFront Cache
+        # TODO: replace with the real distribution ID
+        run: aws cloudfront create-invalidation --distribution-id <DISTRIBUTION_ID> --paths "/*"

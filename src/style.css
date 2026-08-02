@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+@theme {
+  --color-fireball-red: #c61a28;
+}
