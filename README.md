@@ -20,6 +20,12 @@ npm run build
 
 Outputs static files to `dist/`.
 
+## AWS setup
+
+Infra setup tooling (S3 bucket, CloudFront, ACM cert, IAM OIDC role) lives in `fireball_orchestrator`,
+not here — see `scripts/aws/setup_s3_landing.sh` and `topics/fireball_enterprise/docs/setup_aws.md`
+in that repo.
+
 ## How the pieces fit together
 
 - **Tailwind CSS** — utility classes written directly in `index.html`; generates the stylesheet
