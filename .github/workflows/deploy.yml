@@ -2,14 +2,52 @@
 name: Deploy
 run-name: "Deploy (${{ github.ref_name }})"
 
+# Single-branch site — every push to main is a release. The version job bumps the VERSION patch
+# (X.Y.Z -> X.Y.(Z+1)), syncs package.json, tags X.Y.Z (no v prefix), and publishes a GitHub
+# Release; then the deploy job builds and ships. VERSION is plain X.Y.Z, read via
+# [tool.setuptools.dynamic] elsewhere in the family (this repo is npm-only). Family-wide scheme:
+# see fireball_orchestrator's versioning.instructions.md.
+
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+    paths-ignore:
+      - VERSION
 
 jobs:
+  # 🔢 Bump the VERSION patch, tag, and publish a GitHub Release
+  version:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    concurrency: version-bump-main
+    permissions:
+      contents: write
+    steps:
+      - name: Check Out Code
+        uses: actions/checkout@v7
+
+      - name: Bump VERSION patch, tag, release
+        run: |
+          IFS=. read -r major minor patch <<<"$(cut -d- -f1 < VERSION)"
+          new_version="$major.$minor.$((patch + 1))"
+          echo "$new_version" > VERSION
+          node -e "const p=require('./package.json');p.version='$new_version';require('fs').writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+          npm install --package-lock-only --ignore-scripts
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION package.json package-lock.json
+          git commit -m "chore: bump VERSION to $new_version [skip ci]"
+          git tag "$new_version"
+          git push origin HEAD:main "$new_version"
+          gh release create "$new_version" --target main --title "$new_version" --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   deploy:
+    needs: version
+    if: ${{ !cancelled() && !failure() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -18,6 +56,7 @@ jobs:
       - name: Check Out Code
         uses: actions/checkout@v7
         with:
+          ref: main
           lfs: true
 
       - name: Setup Node
