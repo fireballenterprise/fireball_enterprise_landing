@@ -1,7 +1,7 @@
 {
   "name": "fireball_enterprise_landing",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "fireballenterprise.com landing site — directs visitors to the Fireball Enterprise brand sites and social profiles",
   "scripts": {
